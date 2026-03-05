@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEAT AND COOLANT (ASCII CANON V.2)</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            /* Glowing green phosphor terminal text styling */
+            color: #d1f7d1; 
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            cursor: pointer;
+            user-select: none;
+            text-shadow: 0 0 5px rgba(209, 247, 209, 0.4);
+        }
+
+        #ascii-renderer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            /* Very small font and line height to handle massive ASCII density */
+            font-size: 9px;
+            line-height: 9px;
+            color: #555; /* Dim color to make it feel background-ish */
+            overflow: hidden;
+            white-space: pre;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.1s;
+        }
+
+        #spotlight-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Focus spotlight purely on the dialogue text and center area */
+            background: radial-gradient(circle at 50% 55%, transparent 10%, rgba(0, 0, 0, 0.98) 55%);
+            z-index: 2;
+        }
+
+        #dialogue-box {
+            position: absolute;
+            bottom: 5%;
+            width: 80%;
+            max-width: 900px;
+            min-height: 150px;
+            background-color: rgba(0, 0, 0, 0.98);
+            border: 1px solid #6f6;
+            padding: 20px;
+            z-index: 4;
+            display: none;
+        }
+
+        #speaker {
+            font-weight: bold;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #fff;
+            text-transform: uppercase;
+            border-bottom: 1px dotted #6f6;
+            padding-bottom: 5px;
+        }
+
+        #text {
+            font-size: 1.5rem;
+            line-height: 1.5;
+        }
+
+        #start-screen {
+            z-index: 5;
+            font-size: 2.5rem;
+            letter-spacing: 5px;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .shake {
+            animation: shake 0.15s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">CLICK TO BEGIN</div>
+    <pre id="ascii-renderer"></pre>
+    <div id="spotlight-overlay"></div>
+    
+    <div id="dialogue-box">
+        <div id="speaker"></div>
+        <div id="text"></div>
+    </div>
+
+    <script>
+        // --- MASSIVE DENSITY ASCII ASSETS ---
+
+        const asciiStage = `
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+|||||||||||||||||||||||||||||||||||||||||.,:::::::::::::::::::::::.,|||||||||||||||||||||||||||||||||||||||||||||||||||||||
+|||||||||||||||||||||||||||||||||.,::::::::'                      '::::::::.,||||||||||||||||||||||||||||||||||||||||||||||
+|||||||||||||||||||||||||||||.,::::'                                      '::::.,|||||||||||||||||||||||||||||||||||||||||
+|||||||||||||||||||||||||.,::'                                                  '::.,||||||||||||||||||||||||||||||||||||||
+||||||||||||||||||||||||,:'                                                        ':,|||||||||||||||||||||||||||||||||||||
+||||||||||||||||||||||,:'                                                            ':,|||||||||||||||||||||||||||||||||||
+||||||||||||||||||||,:'                                                                ':,|||||||||||||||||||||||||||||||||
+|||||||||||||||||||,:'                                                                  ':,||||||||||||||||||||||||||||||||
+|||||||||||||||||||,:                                                                    :,||||||||||||||||||||||||||||||||
+|||||||||||||||||||,:                                                                    :,||||||||||||||||||||||||||||||||
+|||||||||||||||||||,:                                                                    :,||||||||||||||||||||||||||||||||
+|||||||||||||||||||,:                                                                    :,||||||||||||||||||||||||||||||||
+|||||||||||||||||||,:                                                                    :,||||||||||||||||||||||||||||||||
+|||||||||||||||||||,:                                                                    :,||||||||||||||||||||||||||||||||
+|||||||||||||||||||,:                                                                    :,||||||||||||||||||||||||||||||||
+############################################################################################################################
+        `;
+
+        const asciiShrekSuit = `
+                       :                               :
+                      :  \\                            /  :
+                     :    \\                          /    :
+                    :      \\________________________/      :
+                   :        \\                      /        :
+                  /          \\_                  _/          \\
+                 /             \\____        ____/             \\
+                /                   \\      /                   \\
+               /      _..-.._        \\    /        _..-.._      \\
+              /      /  _   _ \\       \\__/        /  _   _ \\      \\
+             /      |  (o) (o) |                 |  (o) (o) |      \\
+            |       |          |                 |          |       |
+            |        \\   _    /                   \\   _    /        |
+            |         \`.____.'                     \`.____.'         |
+            |            ||                           ||            |
+            |           /\\/\\                         /\\/\\           |
+             \\         /::::\\         .____.         /::::\\         /
+              \\       /::::::\\        |::::|        /::::::\\       /
+               \\     /::::::::\\       |====|       /::::::::\\     /
+                \`---/::::::::::\\______|----|______/::::::::::\\---\`
+                   /:::::::<>:::::::\\         /:::::::<>:::::::\\
+                  /:::::::<>:::::::::\\_______/:::::::<>:::::::::\\
+                 /:::::::::::::::::::::\\     /:::::::::::::::::::::\\
+                |::<>::::<>::::<>::::<>:|   |:<>::::<>::::<>::::<>:|
+                |:::::::::::::::::::::::|   |:::::::::::::::::::::::|
+                |:<>::::<>::::<>::::<>:|   |:<>::::<>::::<>::::<>:|
+                |:::::::::::::::::::::::|   |:::::::::::::::::::::::|
+                 \\::::::::::<>::::::::::/   \\::::::::::<>::::::::::/
+                  \\::::::::<>::::::::::/     \\::::::::<>::::::::::/
+                   \`------------------'\`       \`------------------'\`
+        `;
+
+        const asciiShrekCloseFrantic = `
+   .::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::.
+   ::                                                                            ::
+   ::     .:::::::::::::::::::.                      .:::::::::::::::::::.       ::
+   ::    :::::::::::::::::::::;                     :::::::::::::::::::::;      ::
+   ::   ::::::::::::::::::::::;  MASSIVE SWEAT      ::::::::::::::::::::::;      ::
+   ::  :::::::::::::::::::::::;  GLISTEN DETECTED   :::::::::::::::::::::::;     ::
+   ::  :::::::::::::::::::::::;                     :::::::::::::::::::::::;     ::
+   ::  :::      .---.      :::;                     :::      .---.      :::;     ::
+   ::  :::     /     \\     :::;                     :::     /     \\     :::;     ::
+   ::  :::    |  (o)  |    :::;      INTENSE        :::    |  (o)  |    :::;     ::
+   ::  :::    |   -   |    :::;      BLOODSHOT      :::    |   -   |    :::;     ::
+   ::  :::     \\     /     :::;      EYES           :::     \\     /     :::;     ::
+   ::  :::      \`---'      :::;                     :::      \`---'      :::;     ::
+   ::  :::::::::::::::::::::::;                     :::::::::::::::::::::::;     ::
+   ::   ::::::::::::::::::::::;                     ::::::::::::::::::::::;      ::
+   ::    :::::::::::::::::::::;                     :::::::::::::::::::::;      ::
+   ::     \`:::::::::::::::::::'                      \`:::::::::::::::::::'       ::
+   ::                                                                            ::
+   ::                                                                            ::
+   ::                                                                            ::
+   ::                                                                            ::
+   ::                  .------------------------------------.                    ::
+   ::                  |                                    |                    ::
+   ::                  |::::::::::::::::::::::::::::::::::::|                    ::
+   ::                  |::::::::::::::::::::::::::::::::::::|                    ::
+   ::                  |====================================|                    ::
+   ::                  |====================================|                    ::
+   ::                  |                                    |                    ::
+   ::                   \`----------------------------------'\`                     ::
+   ::                                                                            ::
+   \`::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::'\`
+        `;
+
+        const asciiGarfieldSitting = `
+                  |\\______________/|
+                  |                |
+                  )                (
+                 =\\      -  -      /=  <-- Deadpan Glass Eyes
+                   )     ====     (
+                  /\\______________/\\
+                 /                  \\
+                /                    \\
+               |                      |
+               |                      |
+               |       Matted Fur     |
+               |        Detected      |
+               |                      |
+                \\                    /
+                 \\________  ________/
+                          ||
+                          ||  <-- Mechanical Spine Seam
+                   _______||_______
+                  /                \\
+                 /                  \\
+                /|  Metal Chair     |\\
+               / |  Visible Here    | \\
+              /  |                  |  \\
+             /   |                  |   \\
+        `;
+
+        const asciiOven = `
+            ###########################################
+            #                                         #
+            #       K E N M O R E  -  S E R I E S     #
+            #                                         #
+            ###########################################
+            #        _____             _____          #
+            #       | [H] |           | [C] |         #
+            #        -----             -----          #
+            ###########################################
+            #                                         #
+            #   (  D O O R   I S   C L O S E D  )     #
+            #                                         #
+            ###########################################
+            #                                         #
+            #             \\\\             //            #
+            #              \\\\___________//             #
+            #              |___________|              #
+            #                                         #
+            #                                         #
+            ###########################################
+        `;
+
+        const asciiOvenOpen = `
+            ###########################################
+            #                                         #
+            #   K E N M O R E  -  SERIES 400 (OPEN)   #
+            #                                         #
+            ###########################################
+            #        _____             _____          #
+            #       | [H] |           | [C] |         #
+            #        -----             -----          #
+            ###########################################
+            #:::::::::::::::|         |:::::::::::::::#
+            #:::::::::::::::|         |:::::::::::::::#
+            #:::::::____::::|         |::::____:::::::#
+            #::::::/    \\:::|         |:::/    \\::::::#
+            #:::::|  /\  |::|_________|::|  /\  |::::::#
+            #::::::\\____/::::::::::::::::::\\____/::::::#
+            #:::::::::::::::::::::::::::::::::::::::::#
+            #:::/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\:::#
+            #:::\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\:::#
+            #:::===================================:::# <-- Lower Coil
+            #:::/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\:::# (Target)
+            #:::::::::::::::::::::::::::::::::::::::::#
+            #:::::::::::::::::::::::::::::::::::::::::#
+            ###########################################
+        `;
+
+        const asciiPlinko = `
+        _________________________________________________
+        |   |   |   |   | P L I N K O |   |   |   |   |
+        |___|___|___|___|_____________|___|___|___|___|
+        | * * * * * * * * * * * |
+        |   * * * * * * * * * * * |
+        | * * * * * * * * * * * |
+        |   * * * * * * * * * * * | <-- compressed 
+        | * * * * * * * * * * * |     bone peg board
+        |   * * * * * * * * * * * |
+        | * * * * * * * * * * * |
+        |___|___|___|___|___|___|___|___|___|___|___|___|
+        | S | S | S | S | S | B | B | B | B | B | B | B |
+        | O | O | O | O | O | A | A | A | A | A | A | A |
+        | R | R | R | R | R | R | R | R | R | R | R | R | <-- sorrow catch slots
+        | R | R | R | R | R | K | K | K | K | K | K | K |
+        | O | O | O | O | O | E | E | E | E | E | E | E |
+        | W | W | W | W | W | R | R | R | R | R | R | R |
+        |___|___|___|___|___|___|___|___|___|___|___|___|
+        `;
+
+        const script = [
+            // Using the massive Shrek in a suit asset
+            { speaker: "SHREK", text: "I have been drinking a lot of yellow coolant.", visual: asciiShrekSuit, style: "#5a5" },
+            { speaker: "SHREK", text: "Not the green kind. The green kind makes your bones soft. I am talking about the yellow coolant. You can buy it at the hardware store in the unmarked plastic jugs near the soil. I drink two cups before dusk. It keeps my internal temperature at exactly 41 degrees Fahrenheit.", visual: asciiShrekSuit, style: "#5a5" },
+            { speaker: "SHREK", text: "My wife, Fiona... she tells me, 'Shrek, your blood is becoming a gelatinous paste.' And I say to her... I say... 'Thank you.'", visual: asciiShrekSuit, style: "#5a5" },
+            
+            // Introduce the animatronic Garfield sitting rigidly
+            { speaker: "GARFIELD", text: "Jon Arbuckle is a man who owns a house. Inside the house is a kitchen. Inside the kitchen is an oven. A Kenmore series 400.", visual: asciiGarfieldSitting, style: "#c94" },
+            
+            // Render the specific, open Kenmore oven visualizing the target
+            { speaker: "GARFIELD", text: "Every Tuesday at 3:15 PM, Jon Arbuckle walks into the kitchen. He opens the oven door. He does not turn it on. He unzips his denim trousers. And he urinates directly onto the lower heating element.", visual: asciiOvenOpen, style: "#888" },
+            
+            // Back to rigid Garfield on metal chair
+            { speaker: "GARFIELD", text: "He calls it... 'seasoning the coils.' The urine pools in the back left corner. It dries into a crust. Then, he bakes a Stouffer's frozen lasagna at 375 degrees. The kitchen fills with a smoke that smells like ammonia and burnt hair. I eat the lasagna. It tastes like fear. I am trapped in a cycle of baked urine. It is Tuesday today.", visual: asciiGarfieldSitting, style: "#c94" },
+            
+            // Switch to the intense, sweaty Shrek Close-up
+            { speaker: "SHREK", text: "The Price is Right.", visual: asciiShrekCloseFrantic, effect: "shake", style: "#6b6" },
+            { speaker: "SHREK", text: "We all saw it. We all let it happen. Bob Barker. A man with a microphone no thicker than a pencil. Why was his microphone so thin? What was he hiding in his fist?", visual: asciiShrekCloseFrantic, style: "#6b6" },
+            
+            { speaker: "GARFIELD", text: "Bob Barker was not a man. He was a frequency.", visual: asciiGarfieldSitting, style: "#c94" },
+            
+            { speaker: "SHREK", text: "Exactly. He would look into the camera, at the end of the broadcast. His eyes were completely black. And he would say, 'Help control the pet population. Have your pets spayed or neutered.' But he wasn't talking about dogs. He was looking right at me. He was talking about my glands.", visual: asciiShrekCloseFrantic, style: "#6b6" },
+            
+            // Render the Plinko bone board
+            { speaker: "GARFIELD", text: "Plinko is a machine designed to harvest human sorrow. The chips are made of compressed bone. I have seen the blueprints.", visual: asciiPlinko, style: "#777" },
+            
+            { speaker: "SHREK", text: "Bob Barker knew where the yellow coolant came from! He knew! He took the secret to his grave! Now I have to drink it from the jug!", visual: asciiShrekCloseFrantic, effect: "shake", style: "#6b6" },
+            
+            { speaker: "GARFIELD", text: "Lasagna.", visual: asciiGarfieldSitting, style: "#c94" },
+            
+            // Blackout
+            { speaker: "", text: "END.", visual: "", effect: "blackout", style: "#111" }
+        ];
+
+        let currentLine = 0;
+        let isTyping = false;
+        let audioCtx;
+        let oscillator;
+
+        const startScreen = document.getElementById('start-screen');
+        const rendererEl = document.getElementById('ascii-renderer');
+        const dialogueBox = document.getElementById('dialogue-box');
+        const speakerEl = document.getElementById('speaker');
+        const textEl = document.getElementById('text');
+
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.value = 60; // The continuous 60Hz hum
+            gainNode.gain.value = 0.25;
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+        }
+
+        function typeWriter(text, index, callback) {
+            if (index < text.length) {
+                textEl.innerHTML += text.charAt(index);
+                // Keep the fast typing speed
+                setTimeout(() => typeWriter(text, index + 1, callback), 20);
+            } else {
+                callback();
+            }
+        }
+
+        function nextLine() {
+            if (isTyping || currentLine >= script.length) {
+                // If they click while typing, instantly finish the line
+                if (isTyping) {
+                    textEl.innerHTML = script[currentLine-1].text;
+                    isTyping = false;
+                }
+                return;
+            }
+
+            const line = script[currentLine];
+            
+            // Handle Blackout/End
+            if (line.effect === "blackout") {
+                rendererEl.innerText = "";
+                document.getElementById('spotlight-overlay').style.display = "none";
+                dialogueBox.style.display = "none";
+                if(oscillator) oscillator.stop();
+                return;
+            }
+
+            // Draw the visual (the dense ASCII block) and apply the visual color style
+            rendererEl.innerText = line.visual;
+            rendererEl.style.color = line.style;
+
+            // Handle Shake Effect for Shrek's intense moments
+            rendererEl.classList.remove("shake");
+            if (line.effect === "shake") {
+                void rendererEl.offsetWidth; // trigger reflow
+                rendererEl.classList.add("shake");
+            }
+
+            // Handle Dialogue box display and typing
+            dialogueBox.style.display = "block";
+            speakerEl.innerText = line.speaker;
+            textEl.innerHTML = "";
+            isTyping = true;
+            
+            typeWriter(line.text, 0, () => {
+                isTyping = false;
+            });
+
+            currentLine++;
+        }
+
+        document.body.addEventListener('click', () => {
+            if (document.getElementById('start-screen').style.display !== 'none') {
+                document.getElementById('start-screen').style.display = 'none';
+                initAudio();
+                nextLine();
+            } else {
+                nextLine();
+            }
+        });
+    </script>
+</body>
+</html>
